@@ -116,7 +116,7 @@ def form():
     return HTMLResponse("""
 <html>
 <body>
-    <h2>영상 업로드 → 프레임 추출 → 중복 제거 → ZIP 다운로드</h2>
+    <h2>영상 업로드 → 프레임 추출 → ZIP 다운로드</h2>
 
     <form id="uploadForm">
         <input type="file" name="file" id="fileInput" accept="video/*">
@@ -140,7 +140,7 @@ def form():
         const formData = new FormData();
         formData.append("file", file);
 
-        statusText.innerText = "업로드 중...";
+        statusText.innerText = "프레임 추출 중...";
         progressBar.value = 0;
 
         const xhr = new XMLHttpRequest();
@@ -154,25 +154,30 @@ def form():
             }
         });
 
-        xhr.onload = () => {
-            if (xhr.status === 200) {
-                const res = JSON.parse(xhr.responseText);
-                statusText.innerText = "업로드 완료!";
-                progressBar.value = 100;
+// 다운로드 버튼 미리 만들어 두기
+let downloadLink = document.getElementById("downloadLink");
+if (!downloadLink) {
+    downloadLink = document.createElement("a");
+    downloadLink.id = "downloadLink";
+    downloadLink.innerText = "ZIP 다운로드";
+    downloadLink.style.display = "none"; // 초기에는 안보이게
+    document.body.appendChild(downloadLink);
+}
 
-                //const res = JSON.parse(xhr.responseText);
-                //console.log(res);
-                // 다운로드 버튼 추가 가능
-                const link = document.createElement("a");
-                link.href = res.zip_url;
-                link.innerText = "ZIP 다운로드";
-                document.body.appendChild(link);
-                        
-                
-            } else {
-                statusText.innerText = "업로드 실패";
-            }
-        };
+xhr.onload = () => {
+    if (xhr.status === 200) {
+        const res = JSON.parse(xhr.responseText);
+        statusText.innerText = "추출 완료! zip 파일을 다운로드 해주세요";
+        progressBar.value = 100;
+
+        // 다운로드 버튼 업데이트
+        downloadLink.href = res.zip_url;
+        downloadLink.style.display = "inline"; // 버튼 보이기
+    } else {
+        statusText.innerText = "추출 실패";
+        downloadLink.style.display = "none"; // 실패 시 버튼 숨기기
+    }
+};
 
         xhr.send(formData);
     });

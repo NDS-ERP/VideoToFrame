@@ -98,7 +98,8 @@ async def upload_video(file: UploadFile = File(...)):
     shutil.rmtree(frame_dir)
     os.remove(save_path)
 
-    return RedirectResponse(url="/", status_code=303)
+    return {"status": "success", "zip_url": f"/download/{video_id}", "frames_count": frame_count}
+
 
 # ---------------- ZIP 다운로드 ----------------
 @app.get("/download/{video_id}")
@@ -155,6 +156,7 @@ def form():
 
         xhr.onload = () => {
             if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
                 statusText.innerText = "업로드 완료!";
                 progressBar.value = 100;
 
@@ -187,4 +189,4 @@ def form():
 PORT = int(os.environ.get("PORT", 8001))  # Railway/Render에서 PORT 제공
 
 if __name__ == "__main__":
-    uvicorn.run("server:app", host="0.0.0.0", port=PORT, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT)

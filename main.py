@@ -160,8 +160,8 @@ def form():
                 statusText.innerText = "업로드 완료!";
                 progressBar.value = 100;
 
-                const res = JSON.parse(xhr.responseText);
-                console.log(res);
+                //const res = JSON.parse(xhr.responseText);
+                //console.log(res);
                 // 다운로드 버튼 추가 가능
                 const link = document.createElement("a");
                 link.href = res.zip_url;

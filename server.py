@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 import shutil
 import zipfile
 import uvicorn
+from fastapi.responses import RedirectResponse
 
 app = FastAPI()
 
@@ -97,7 +98,7 @@ async def upload_video(file: UploadFile = File(...)):
     shutil.rmtree(frame_dir)
     os.remove(save_path)
 
-    return {"status": "success", "zip_url": f"/download/{video_id}", "frames_count": frame_count}
+    return RedirectResponse(url="/", status_code=303)
 
 # ---------------- ZIP 다운로드 ----------------
 @app.get("/download/{video_id}")
@@ -107,21 +108,83 @@ def download_zip(video_id: str):
         return FileResponse(zip_path, filename=f"{video_id}.zip", media_type='application/zip')
     return {"error": "ZIP file not found"}
 
+
 # ---------------- 업로드 폼 ----------------
 @app.get("/")
 def form():
     return HTMLResponse("""
-    <html>
-        <body>
-            <h2>영상 업로드 → 프레임 추출 → 중복 제거 → ZIP 다운로드</h2>
-            <form action="/upload" enctype="multipart/form-data" method="post">
-                <input type="file" name="file" accept="video/*">
-                <button type="submit">프레임 추출</button>
-            </form>
-        </body>
-    </html>
-    """)
+<html>
+<body>
+    <h2>영상 업로드 → 프레임 추출 → 중복 제거 → ZIP 다운로드</h2>
+
+    <form id="uploadForm">
+        <input type="file" name="file" id="fileInput" accept="video/*">
+        <button type="submit">프레임 추출</button>
+    </form>
+
+    <p id="status"></p>
+    <progress id="progressBar" value="0" max="100" style="width:300px;"></progress>
+
+    <script>
+    const form = document.getElementById("uploadForm");
+    const statusText = document.getElementById("status");
+    const progressBar = document.getElementById("progressBar");
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();  // 기본 제출 막기
+
+        const file = document.getElementById("fileInput").files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        statusText.innerText = "업로드 중...";
+        progressBar.value = 0;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/upload");
+
+        // 업로드 진행률
+        xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+                const percent = (e.loaded / e.total) * 100;
+                progressBar.value = percent;
+            }
+        });
+
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                statusText.innerText = "업로드 완료!";
+                progressBar.value = 100;
+
+                const res = JSON.parse(xhr.responseText);
+                console.log(res);
+                // 다운로드 버튼 추가 가능
+                const link = document.createElement("a");
+                link.href = res.zip_url;
+                link.innerText = "ZIP 다운로드";
+                document.body.appendChild(link);
+                        
+                
+            } else {
+                statusText.innerText = "업로드 실패";
+            }
+        };
+
+        xhr.send(formData);
+    });
+    </script>
+</body>
+</html>
+""")
 
 # ---------------- 서버 실행 ----------------
+# 로컬에서 실행 시
+# if __name__ == "__main__":
+#     uvicorn.run(app, host="0.0.0.0", port=8001)
+
+PORT = int(os.environ.get("PORT", 8001))  # Railway/Render에서 PORT 제공
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run("server:app", host="0.0.0.0", port=PORT, reload=True)
